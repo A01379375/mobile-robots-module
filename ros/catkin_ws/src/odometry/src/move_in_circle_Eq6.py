@@ -13,8 +13,10 @@ class MoveInCircleCommander():
         rospy.init_node('MoveInCircle')
 
         # Publish to the /cmd_vel topic
-        self.pub = rospy.Publisher("/vel_cmd", Twist, queue_size=1)
+        # self.pub = rospy.Publisher("/vel_cmd", Twist, queue_size=1) # Original was wrong
+        self.pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
         self.rate = rospy.Rate(20)
+        rospy.on_shutdown(self.end_callback)
         
 
     def main(self, radie=1.2, linvel=0.1 ):
@@ -26,15 +28,24 @@ class MoveInCircleCommander():
             self._move_in_circle(radie, linvel)
                     
                     
+    
     def _move_in_circle(self, radie, linvel):
 
         tw = Twist()
         
         #----------------------------------------------------------------------------
         # Your code here
+        tw.linear.x = linvel
+        tw.angular.z = -linvel / radie # w = v / r, negative so it turns relatively around center
         #----------------------------------------------------------------------------
 
         self.pub.publish(tw)
+
+    def end_callback(self):
+		tw = Twist()
+		tw.linear.x = 0
+		tw.angular.z = 0
+		self.pub.publish(tw)
         
 
         
