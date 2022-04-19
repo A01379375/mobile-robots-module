@@ -7,8 +7,8 @@ import rospy
 import tf2_ros
 from tf import transformations as trf
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Vector3, TransformStamped, PoseWithCovariance,TwistWithCovariance
-from std_msgs.msg import Float32
+from geometry_msgs.msg import Vector3, TransformStamped, PoseWithCovariance,TwistWithCovariance, Pose
+from std_msgs.msg import Float32, Float64
 
 
 class MyOdometryPublisher():
@@ -19,8 +19,10 @@ class MyOdometryPublisher():
         # Subscribe to the wheel velocity topics
         rospy.Subscriber("/wl", Float32, self._wl_callback)
         rospy.Subscriber("/wr", Float32, self._wr_callback)
-        self.wl
-        self.wr
+        self.wl = None
+        self.wr = None
+        self.r = 0.05 # Radius of wheels
+        self.d = 0.08 # Distance between wheels
         
         # Publish to the odometry topic
         self.odom_pub = rospy.Publisher("/odometry", Odometry, queue_size=1)
@@ -36,7 +38,7 @@ class MyOdometryPublisher():
 
         # Keep track of time between updates to the state of the robot
         self.current_time = rospy.get_time()
-        self.last_time = current_time
+        self.last_time = self.current_time
         
         # For broadcasting transform from base_link to odom 
         self.br = tf2_ros.TransformBroadcaster() 
@@ -54,14 +56,29 @@ class MyOdometryPublisher():
         # If there's an object attached to the ee we want it to follow its trajectory
         while not rospy.is_shutdown():
             self.rate.sleep()
-            self.current_time = rospy.time()
+            self.current_time = rospy.get_time()
             dt  = self.current_time - self.last_time
 
             #----------------------------------------------------------------------------
             # Your code here
             #
             # Update the model state
+            vr = self.wr * self.r
+            vl = self.wl * self.r
+            v = (vr + vl) / 2
+            w = (vr - vl) / self.d
+            self.initial_state = self.initial_state + dt * np.array([w, v * np.cos(self.initial_state[0]), v * np.sin(self.initial_state[0])])
+            
             # Calculate the pose
+            th_est = self.initial_state[0]
+            x_est = self.initial_state[1]
+            y_est = self.initial_state[2]
+            translation = Vector3()
+            translation.x = x_est
+            translation.y = y_est
+            translation.z = 0.0
+            rotation = trf.quaternion_from_euler(0, 0, th_est)
+            
             # Calculate the pose covariance
             #
             #----------------------------------------------------------------------------
@@ -72,8 +89,8 @@ class MyOdometryPublisher():
             t.header.stamp = rospy.Time.now()
             t.header.frame_id = "odom"
             t.child_frame_id = "base_link"
-            #t.transform.translation = ?
-            #t.transform.rotation = ?
+            t.transform.translation = translation
+            t.transform.rotation = rotation
             self.br.sendTransform(t)
 
             
@@ -85,7 +102,8 @@ class MyOdometryPublisher():
             # Set the position
             odom.pose.pose = Pose(t.transform.translation, t.transform.rotation)
             # Set the velocity
-            # odom.twist.twist = ?
+            odom.twist.twist.linear.x = v
+            odom.twist.twist.angular.z = w
 
             # publish the message
             self.odom_pub.publish(odom)
