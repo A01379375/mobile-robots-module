@@ -73,11 +73,20 @@ class MyOdometryPublisher():
             th_est = self.initial_state[0]
             x_est = self.initial_state[1]
             y_est = self.initial_state[2]
-            translation = Vector3()
-            translation.x = x_est
-            translation.y = y_est
-            translation.z = 0.0
-            rotation = trf.quaternion_from_euler(0, 0, th_est)
+            
+            p = Pose()
+            p.position.x = x_est
+            p.position.y = y_est
+            p.position.z = 0.0
+            
+            q = trf.quaternion_from_euler(0, 0, th_est)
+            
+            p.orientation.x = q[0]
+            p.orientation.y = q[1]
+            p.orientation.z = q[2]
+            p.orientation.w = q[3]
+            
+            self.model_state = p
             
             # Calculate the pose covariance
             #
@@ -89,8 +98,8 @@ class MyOdometryPublisher():
             t.header.stamp = rospy.Time.now()
             t.header.frame_id = "odom"
             t.child_frame_id = "base_link"
-            t.transform.translation = translation
-            t.transform.rotation = rotation
+            t.transform.translation = self.model_state.position
+            t.transform.rotation = self.model_state.orientation
             self.br.sendTransform(t)
 
             
@@ -107,7 +116,6 @@ class MyOdometryPublisher():
 
             # publish the message
             self.odom_pub.publish(odom)
-
 
             # Publish the state
             self.x_pub.publish(x_est)
