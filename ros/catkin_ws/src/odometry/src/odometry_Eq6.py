@@ -58,6 +58,7 @@ class MyOdometryPublisher():
             self.rate.sleep()
             self.current_time = rospy.get_time()
             dt  = self.current_time - self.last_time
+            self.last_time = self.current_time
 
             #----------------------------------------------------------------------------
             # Your code here
