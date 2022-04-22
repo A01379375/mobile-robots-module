@@ -30,9 +30,10 @@ class OdometryComparator():
         self.odom = None
         
     def _true_odom_callback(self, data):
-        self.true_odom = data.data
+        self.true_odom = data
+    
     def _odom_callback(self, data):
-        self.odom = data.data
+        self.odom = data
         
         
     def pose2np(self, p):
@@ -72,6 +73,7 @@ class OdometryComparator():
                 # absolute angle 
                 err_q = trf.quaternion_from_matrix(gab)
                 err_th = 2 * np.arccos(err_q[0])
+                print('ths', 2 * np.sin(err_q[3]), 'thc', err_th)
                 d = gab[:3, 3]
                 err_d = np.linalg.norm(d)
                 

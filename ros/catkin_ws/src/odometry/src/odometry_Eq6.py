@@ -68,10 +68,18 @@ class MyOdometryPublisher():
             vl = self.wl * self.r
             v = (vr + vl) / 2
             w = (vr - vl) / self.d
-            self.initial_state = self.initial_state + dt * np.array([w, v * np.cos(self.initial_state[0]), v * np.sin(self.initial_state[0])])
+            new_state = self.initial_state + dt * np.array([w, v * np.cos(self.initial_state[0]), v * np.sin(self.initial_state[0])])
+            self.initial_state = new_state
             
             # Calculate the pose
             th_est = self.initial_state[0]
+            if th_est < -np.pi:
+				th_est += np.pi
+			
+            if th_est >= np.pi:
+				th_est -= np.pi
+            
+            print('th_est', th_est)
             x_est = self.initial_state[1]
             y_est = self.initial_state[2]
             
