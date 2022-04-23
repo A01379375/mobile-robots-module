@@ -19,10 +19,10 @@ class MyOdometryPublisher():
         # Subscribe to the wheel velocity topics
         rospy.Subscriber("/wl", Float32, self._wl_callback)
         rospy.Subscriber("/wr", Float32, self._wr_callback)
-        self.wl = None
-        self.wr = None
+        self.wl = 0
+        self.wr = 0
         self.r = 0.05 # Radius of wheels
-        self.d = 0.08 # Distance between wheels
+        self.d = 0.18 # Distance between wheels
         
         # Publish to the odometry topic
         self.odom_pub = rospy.Publisher("/odometry", Odometry, queue_size=1)
@@ -54,11 +54,18 @@ class MyOdometryPublisher():
     def main(self):
 
         # If there's an object attached to the ee we want it to follow its trajectory
+        is_set = False
         while not rospy.is_shutdown():
             self.rate.sleep()
-            self.current_time = rospy.get_time()
-            dt  = self.current_time - self.last_time
-            self.last_time = self.current_time
+            if not is_set:
+				self.current_time = rospy.get_time()
+				self.last_time = self.current_time
+				dt = 0
+				is_set = True
+            else:
+				self.current_time = rospy.get_time()
+				dt  = self.current_time - self.last_time
+				self.last_time = self.current_time
 
             #----------------------------------------------------------------------------
             # Your code here
@@ -69,17 +76,16 @@ class MyOdometryPublisher():
             v = (vr + vl) / 2
             w = (vr - vl) / self.d
             new_state = self.initial_state + dt * np.array([w, v * np.cos(self.initial_state[0]), v * np.sin(self.initial_state[0])])
-            self.initial_state = new_state
             
             # Calculate the pose
             th_est = self.initial_state[0]
-            if th_est < -np.pi:
-				th_est += np.pi
+            if new_state[0] < -np.pi:
+				new_state[0] += 2 * np.pi
 			
-            if th_est >= np.pi:
-				th_est -= np.pi
+            if new_state[0] >= np.pi:
+				new_state[0] -= 2 * np.pi
             
-            print('th_est', th_est)
+            print(th_est)
             x_est = self.initial_state[1]
             y_est = self.initial_state[2]
             
@@ -96,6 +102,8 @@ class MyOdometryPublisher():
             p.orientation.w = q[3]
             
             self.model_state = p
+            
+            self.initial_state = new_state
             
             # Calculate the pose covariance
             #
