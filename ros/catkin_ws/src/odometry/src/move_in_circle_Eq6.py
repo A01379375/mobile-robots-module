@@ -29,11 +29,11 @@ class MoveInCircleCommander():
                     
     
     def _move_in_circle(self, radie, linvel):
-		"""
-		Moves Puzzlebot in a circular trajectory of radius = radie
-		and at linear velocity = linvel
-		"""
-
+        """
+        Moves Puzzlebot in a circular trajectory of radius = radie
+        and at linear velocity = linvel
+        """
+		
         tw = Twist()
         
         #----------------------------------------------------------------------------
