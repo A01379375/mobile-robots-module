@@ -36,8 +36,8 @@ class MoveInCircleCommander():
         #----------------------------------------------------------------------------
         # Your code here
         tw.linear.x = linvel
-        tw.angular.z = linvel / radie # w = v / r, negative so it turns relatively around center
-        #le movi e signo a positivo en angular
+        tw.angular.z = -linvel / radie # w = v / r, negative so it turns relatively around center
+
         #----------------------------------------------------------------------------
 
         self.pub.publish(tw)
