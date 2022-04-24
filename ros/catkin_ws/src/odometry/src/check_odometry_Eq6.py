@@ -70,7 +70,7 @@ class OdometryComparator():
                 gab = np.dot(np.linalg.inv(gsa), gsb)
                 
                 # Compute the error in absolute distance, and the error in
-                # absolute angle ]
+                # absolute angle
                 err_q = trf.quaternion_from_matrix(gab)
                 err_th = 2 * np.arccos(err_q[3])
                 d = gab[:3, 3]

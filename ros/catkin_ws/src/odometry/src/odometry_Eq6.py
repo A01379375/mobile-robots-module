@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Implements a "ground truth" odometry using the model state information from Gazebo.
+""" Implements an estimated odometry using the wheel velocities.
 """
 
 import numpy as np
@@ -19,6 +19,7 @@ class MyOdometryPublisher():
         # Subscribe to the wheel velocity topics
         rospy.Subscriber("/wl", Float32, self._wl_callback)
         rospy.Subscriber("/wr", Float32, self._wr_callback)
+        # Initialize velocities as 0
         self.wl = 0
         self.wr = 0
         self.r = 0.05 # Radius of wheels
@@ -32,7 +33,7 @@ class MyOdometryPublisher():
         self.y_pub = rospy.Publisher("/est_state/y", Float64, queue_size=1)
         self.th_pub = rospy.Publisher("/est_state/theta", Float64, queue_size=1)
 
-        self.initial_state = np.array([0.0, 0.0, 0.0])
+        self.initial_state = np.array([0.0, 0.0, 0.0]) # (theta, x, y)
         self.model_state = None
         self.model_twist = None
 
@@ -52,16 +53,17 @@ class MyOdometryPublisher():
         
         
     def main(self):
-
-        # If there's an object attached to the ee we want it to follow its trajectory
         is_set = False
         while not rospy.is_shutdown():
             self.rate.sleep()
+            # A lot of time may have passed from construction to main(), so
+            # we "restart the timer"
             if not is_set:
 				self.current_time = rospy.get_time()
 				self.last_time = self.current_time
 				dt = 0
 				is_set = True
+            # If not, then we calculate dt based on the previous update
             else:
 				self.current_time = rospy.get_time()
 				dt  = self.current_time - self.last_time
@@ -75,19 +77,21 @@ class MyOdometryPublisher():
             vl = self.wl * self.r
             v = (vr + vl) / 2
             w = (vr - vl) / self.d
+            # Euler method
             new_state = self.initial_state + dt * np.array([w, v * np.cos(self.initial_state[0]), v * np.sin(self.initial_state[0])])
             
             # Calculate the pose
-            th_est = self.initial_state[0]
+            th_est = self.initial_state[0] # We publish the actual state, not the next estimate
+            
+            # Limit theta from -pi to pi
             if new_state[0] < -np.pi:
 				new_state[0] += 2 * np.pi
 			
             if new_state[0] >= np.pi:
 				new_state[0] -= 2 * np.pi
-            
-            print(th_est)
-            x_est = self.initial_state[1]
-            y_est = self.initial_state[2]
+			
+            x_est = self.initial_state[1] # We publish the actual state, not the next estimate
+            y_est = self.initial_state[2] # We publish the actual state, not the next estimate
             
             p = Pose()
             p.position.x = x_est
@@ -101,11 +105,10 @@ class MyOdometryPublisher():
             p.orientation.z = q[2]
             p.orientation.w = q[3]
             
-            self.model_state = p
+            self.model_state = p # Update model_state
             
-            self.initial_state = new_state
-            
-            # Calculate the pose covariance
+            self.initial_state = new_state # Update initial state for next iteration
+
             #
             #----------------------------------------------------------------------------
 

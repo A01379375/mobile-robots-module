@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Implements a "ground truth" odometry using the model state information from Gazebo.
+""" Implements a node that moves the Puzzlebot in a circle of given radius, at given linear velocity.
 """
 
 import sys
@@ -16,12 +16,11 @@ class MoveInCircleCommander():
         # self.pub = rospy.Publisher("/vel_cmd", Twist, queue_size=1) # Original was wrong
         self.pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
         self.rate = rospy.Rate(20)
-        rospy.on_shutdown(self.end_callback)
+        rospy.on_shutdown(self.end_callback) # If node dies, stop robot
         
 
     def main(self, radie=1.2, linvel=0.1 ):
 
-        # If there's an object attached to the ee we want it to follow its trajectory
         while not rospy.is_shutdown():
             self.rate.sleep()
 
@@ -30,6 +29,10 @@ class MoveInCircleCommander():
                     
     
     def _move_in_circle(self, radie, linvel):
+		"""
+		Moves Puzzlebot in a circular trajectory of radius = radie
+		and at linear velocity = linvel
+		"""
 
         tw = Twist()
         
@@ -43,6 +46,10 @@ class MoveInCircleCommander():
         self.pub.publish(tw)
 
     def end_callback(self):
+		"""
+		If node dies, for instance, by keyboard interrupt, we stop
+		the robot
+		"""
 		tw = Twist()
 		tw.linear.x = 0
 		tw.angular.z = 0
