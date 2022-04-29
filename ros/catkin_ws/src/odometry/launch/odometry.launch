@@ -1,10 +1,8 @@
 <launch>
 
 <!-- Launch the node calculating the true odometry based on information from gazebo-->
-
 <node name="odometry_true" pkg="odometry" type="reference_odometry.py"/>
-<node name="odometry_calc" pkg="odometry" type="odometry_Eq6.py"/>
-<node name="check_odometrey" pkg="odometry" type="check_odometry_Eq6.py"/>
-<!-- <node name="move_in_circle" pkg="odometry" type="move_in_circle_Eq6.py"/> --> 
+<node name="odometry" pkg="odometry" type="odometry.py"/>
+<node name="odometry_check" pkg="odometry" type="check_odometry.py"/>
 
 </launch>
