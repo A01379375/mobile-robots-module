@@ -6,6 +6,9 @@ import tf2_ros
 import geometry_msgs.msg
 from tf2_geometry_msgs import PointStamped
 
+# Our imports
+import numpy as np
+
 class Go2PointController:
     def __init__(self, v0=0.4, Kth=2, alpha=4 ):
         """
@@ -36,10 +39,12 @@ class Go2PointController:
             try:
                 #goal.header.stamp = rospy.Time.now()
                 # Should also work using
-                 goal.header.stamp = rospy.Time(0)
+                goal.header.stamp = rospy.Time(0)
                 
                 # Obtain the goal point expressed in the reference frame of base_link
                 bot_goal = self.tf_buffer.transform(goal, 'base_link', timeout = rospy.Duration(1))
+                e_x = bot_goal.point.x
+                e_y = bot_goal.point.y
 
                 #--------------------------------------------------------------
                 # Your code here
@@ -47,10 +52,10 @@ class Go2PointController:
                 # 2) Calculate the linear and angular velocities.
                 # 3) Publish the twist message to /cmd_vel
 
-                e_theta = 0.0
-                e_dist = 0.0
-                v = 0.0
-                w = 0.0
+                e_theta = np.arctan2(e_y, e_x)
+                e_dist = np.sqrt(e_x ** 2 + e_y ** 2)
+                v = self.v0 * (1 - np.exp(-self.alpha * (e_dist ** 2)))
+                w = self.Kth * e_theta
                 
                 msg = geometry_msgs.msg.Twist()
                 msg.angular.z = w
