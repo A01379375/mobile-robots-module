@@ -39,9 +39,11 @@ def go_to_point_controller(x, y, vmax, Kth, alpha):
 
     #---------------------------------------------------------
     # YOUR CODE HERE
-    w = 0.0
-    d = 0.0
-    v = 0.0
+    e_theta = np.arctan2(y, x)
+    e_dist = np.sqrt(x ** 2 + y ** 2)
+    w = Kth * e_theta
+    d = e_dist
+    v = vmax * (1 - np.exp(-alpha * (e_dist ** 2)))
     #---------------------------------------------------------
     
     return w, v, d
@@ -69,7 +71,9 @@ def steer_towards_point_controller(x, y, v):
 
     #---------------------------------------------------------
     # YOUR CODE HERE
-    w = 0.0
+    L2 = y ** 2 + x ** 2
+    gamma = 2 * y / L2
+    w = gamma * v
     #---------------------------------------------------------
 
     return w
@@ -99,21 +103,23 @@ def get_goal_point(p0, p1, L):
 
     p0 = np.asarray(p0)
     p1 = np.asarray(p1)
-    w = p1-p0
+    w = p1 - p0
 
     a = np.dot(w, w)
-    b = 2*np.dot(p0, w)
-    c = np.dot(p0, p0) - L**2
+    b = 2 * np.dot(p0, w)
+    c = np.dot(p0, p0) - L ** 2
 
-    d = b**2 - 4*a*c
+    d = b ** 2 - 4 * a * c
     if d < 0:
         pg = p0
         beta = np.nan
     else:
         #---------------------------------------------------------
         # YOUR CODE HERE
-        beta = 0.0
-        pg = [0,0]
+        beta1 = (-b + np.sqrt(d)) / (2 * a)
+        beta2 = (-b - np.sqrt(d)) / (2 * a)
+        beta = np.max([beta1, beta2])
+        pg = p0 + beta * w
         #---------------------------------------------------------
 
     return pg, beta
@@ -186,7 +192,7 @@ class Go2Point(py_trees.behaviour.Behaviour):
         # YOUR CODE HERE
         # Transform the point to the robot reference frame
         self.goal.header.stamp = rospy.Time(0)
-        goal_b = self.tf_buffer.transform(...)
+        goal_b = self.tf_buffer.transform(self.goal, self.robot_frame, timeout=rospy.Duration(1))
         #----------------------------------------------------
 
         w, v, dist = go_to_point_controller(goal_b.point.x, goal_b.point.y,
@@ -199,7 +205,9 @@ class Go2Point(py_trees.behaviour.Behaviour):
             #----------------------------------------------------
             # YOUR CODE HERE
             # Publish the velocity command to cmd_vel
-            self.msg.linear.x = v # etc.
+            self.msg.linear.x = v
+            self.msg.angular.z = w
+            self.cmd_vel_pub.publish(self.msg)
             #----------------------------------------------------
             
             return py_trees.Status.RUNNING
@@ -283,8 +291,8 @@ class PursuitGoal(py_trees.behaviour.Behaviour):
         # Transform the two waypoints to the robot reference frame
         self.wp0.header.stamp = rospy.Time(0)
         self.wp1.header.stamp = rospy.Time(0)
-        wp0_b = self.tf_buffer.transform(...)
-        wp1_b = self.tf_buffer.transform(...)
+        wp0_b = self.tf_buffer.transform(self.wp0, self.robot_frame, timeout=rospy.Duration(1))
+        wp1_b = self.tf_buffer.transform(self.wp1, self.robot_frame, timeout=rospy.Duration(1))
         #------------------------------------------------------------
 
         pg, beta = get_goal_point([wp0_b.point.x, wp0_b.point.y],
@@ -306,7 +314,9 @@ class PursuitGoal(py_trees.behaviour.Behaviour):
             #----------------------------------------------------
             # YOUR CODE HERE
             # Publish the velocity command to cmd_vel
-
+            self.msg.linear.x = vel_max
+            self.msg.angular.z = w
+            self.cmd_vel_pub.publish(self.msg)
             #----------------------------------------------------
 
             return py_trees.Status.RUNNING
@@ -351,6 +361,9 @@ def create_behavior_tree(waypoints, frame, look_ahead_dist, vel_max,
     #----------------------------------------------------------------------------
     # YOUR CODE HERE
     # Add the final node to go to the last waypoint, which is the final goal point
+    g2p_final = Go2Point()
+    g2p_final.setup(waypoints[-1], 0.05, cmd_vel_pub, tf_buffer, vel_max=vel_max, K_theta=K_theta, alpha=alpha)
+    root.add_child(g2p_final)
     #
     #----------------------------------------------------------------------------
 
