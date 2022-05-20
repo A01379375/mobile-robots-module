@@ -314,7 +314,7 @@ class PursuitGoal(py_trees.behaviour.Behaviour):
             #----------------------------------------------------
             # YOUR CODE HERE
             # Publish the velocity command to cmd_vel
-            self.msg.linear.x = vel_max
+            self.msg.linear.x = self.vel_max
             self.msg.angular.z = w
             self.cmd_vel_pub.publish(self.msg)
             #----------------------------------------------------
